@@ -1,135 +1,175 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Earn Hub</title>
-<link rel="manifest" href="manifest.json">
-<meta name="theme-color" content="#4CAF50">
-<meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-<style>
-body { font-family: Arial, sans-serif; margin:0; padding:0; background:#f5f5f5; }
-nav { position: fixed; bottom:0; width:100%; display:flex; justify-content:space-around; background:#fff; border-top:1px solid #ccc; }
-nav button { flex:1; padding:15px; font-size:16px; cursor:pointer; border:none; background:none; }
-.tab { display:none; padding:20px; margin-bottom:60px; }
-#balanceDisplay { text-align:center; font-size:22px; font-weight:bold; margin-bottom:20px; background:#4CAF50; color:#fff; padding:10px 0; border-radius:10px; }
-input, button { padding:10px; margin:5px 0; border-radius:5px; border:1px solid #ccc; }
-button { background:#4CAF50; color:#fff; cursor:pointer; }
-button:hover { background:#45a049; }
-.card { background:#fff; padding:15px; margin:10px 0; border-radius:10px; box-shadow:0 2px 5px rgba(0,0,0,0.1); display:flex; justify-content:space-between; align-items:center; }
-.card a { background:#2196F3; color:#fff; padding:5px 10px; border-radius:5px; text-decoration:none; }
-.card a:hover { background:#0b7dda; }
-table { width:100%; border-collapse: collapse; margin-bottom:10px; }
-th, td { border:1px solid #000; padding:5px; text-align:center; }
-#adminNav button { padding:10px; margin:2px; background:#2196F3; color:#fff; border-radius:5px; border:none; cursor:pointer; }
-#adminNav button:hover { background:#0b7dda; }
-</style>
-<script src="https://js.paystack.co/v2/inline.js"></script>
+  <meta charset="UTF-8">
+  <title>Earn Hub</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <style>
+    body {font-family: Arial, sans-serif; margin:0; padding:0; background:#f5f5f5;}
+    .loading {display:flex; align-items:center; justify-content:center; height:100vh; font-size:24px;}
+    .hidden {display:none;}
+    header {background:#4CAF50; color:white; padding:15px; text-align:center; font-size:20px;}
+    nav {position:fixed; bottom:0; left:0; right:0; background:#fff; display:flex; justify-content:space-around; border-top:1px solid #ccc;}
+    nav button {flex:1; padding:10px; border:none; background:none; font-size:16px;}
+    .page {padding:20px; display:none;}
+    .active {display:block;}
+    .lock {opacity:0.5; pointer-events:none;}
+    .task, .ad {margin:10px 0; padding:10px; background:#fff; border-radius:6px; box-shadow:0 2px 4px rgba(0,0,0,0.1);}
+    input, button {padding:10px; margin:5px 0; width:100%;}
+    .admin-nav {display:flex; gap:10px; margin-bottom:10px;}
+    .admin-nav button {flex:1; padding:10px; border:none; background:#4CAF50; color:white;}
+  </style>
 </head>
 <body>
+  <div id="loading" class="loading">Loading...</div>
 
-<!-- Signup Section -->
-<div id="signupSection">
-  <h2>Welcome to Earn Hub</h2>
-  <p>Pay ₦200 to access the app</p>
-  <input type="email" id="userEmail" placeholder="Enter your email">
-  <input type="text" id="referralInput" placeholder="Referral code (optional)">
-  <button onclick="payUser()">Pay ₦200</button>
-</div>
+  <!-- Auth -->
+  <div id="auth" class="page">
+    <h2>Login / Signup</h2>
+    <input id="name" placeholder="Full Name">
+    <input id="email" placeholder="Email">
+    <input id="phone" placeholder="Phone">
+    <input id="password" type="password" placeholder="Password">
+    <button onclick="signup()">Sign Up</button>
+    <button onclick="login()">Login</button>
+  </div>
 
-<!-- Main App -->
-<div id="mainApp" style="display:none;">
-  <div id="balanceDisplay">Balance: ₦0</div>
-  
-  <div id="dashboardTab" class="tab">
-    <h3>Tasks & Ads</h3>
-    <div id="tasksList"></div>
-    <div id="adsList"></div>
+  <!-- User UI -->
+  <div id="userApp" class="hidden">
+    <header>Balance: ₦<span id="balance">0</span></header>
+    <div id="dashboard" class="page active">
+      <h3>Tasks & Ads</h3>
+      <div id="lockedMsg">Pay ₦200 to unlock tasks & ads</div>
+      <button onclick="payNow()">Pay ₦200</button>
+      <div id="tasks" class="hidden"></div>
+      <div id="ads" class="hidden"></div>
+    </div>
+    <div id="refer" class="page">
+      <h3>Refer & Earn</h3>
+      <p>Your referral link:</p>
+      <input id="refLink" readonly>
+    </div>
+    <div id="profile" class="page">
+      <h3>Profile</h3>
+      <p id="userInfo"></p>
+      <h4>Withdraw</h4>
+      <input id="withdrawAmt" placeholder="Amount">
+      <input id="bank" placeholder="Bank Account">
+      <button onclick="withdraw()">Request Withdraw</button>
+    </div>
+    <nav>
+      <button onclick="showPage('dashboard')">Dashboard</button>
+      <button onclick="showPage('refer')">Refer</button>
+      <button onclick="showPage('profile')">Profile</button>
+    </nav>
   </div>
-  
-  <div id="referTab" class="tab">
-    <h3>Refer & Earn</h3>
-    <p>Your Referral Code: <span id="refCode"></span></p>
-  </div>
-  
-  <div id="profileTab" class="tab">
-    <h3>Profile</h3>
-    <p>Username: <span id="usernameDisplay"></span></p>
-    <p>Email: <span id="emailDisplay"></span></p>
-    <button onclick="requestDeposit()">Deposit</button>
-    <button onclick="requestWithdraw()">Withdraw</button>
-    <button onclick="logout()">Logout</button>
-  </div>
-  
-  <nav>
-    <button onclick="showTab('dashboardTab')">Dashboard</button>
-    <button onclick="showTab('referTab')">Refer & Earn</button>
-    <button onclick="showTab('profileTab')">Profile</button>
-  </nav>
-</div>
 
-<!-- Admin Panel -->
-<div id="adminPanel" style="display:none;">
-  <h2>Admin Control Panel</h2>
-  <div>
-    <input type="text" id="adminUser" placeholder="Admin Username">
-    <input type="password" id="adminPass" placeholder="Admin Password">
-    <button onclick="adminLogin()">Login</button>
+  <!-- Admin UI -->
+  <div id="adminApp" class="hidden">
+    <header>Admin Panel</header>
+    <div class="admin-nav">
+      <button onclick="showAdmin('users')">Users</button>
+      <button onclick="showAdmin('tasks')">Tasks</button>
+      <button onclick="showAdmin('ads')">Ads</button>
+      <button onclick="showAdmin('withdraws')">Withdrawals</button>
+    </div>
+    <div id="adminUsers" class="page active"><h3>All Users</h3><div id="userList"></div></div>
+    <div id="adminTasks" class="page"><h3>Add Task</h3><input id="taskLink" placeholder="Task Link"><input id="taskReward" placeholder="Reward"><button onclick="addTask()">Add Task</button><div id="taskList"></div></div>
+    <div id="adminAds" class="page"><h3>Add Ad</h3><input id="adVideo" placeholder="Video URL"><input id="adLink" placeholder="Click URL"><button onclick="addAd()">Add Ad</button><div id="adList"></div></div>
+    <div id="adminWithdraws" class="page"><h3>Withdraw Requests</h3><div id="withdrawList"></div></div>
   </div>
-  <div id="adminControls" style="display:none;">
-    <div id="adminNav">
-      <button onclick="showAdminTab('adminDashboard')">Dashboard</button>
-      <button onclick="showAdminTab('adminUsers')">User Management</button>
-      <button onclick="showAdminTab('adminTasks')">Tasks & Ads</button>
-      <button onclick="showAdminTab('adminDeposits')">Deposit Requests</button>
-      <button onclick="showAdminTab('adminWithdraws')">Withdraw Requests</button>
-    </div>
-    
-    <div id="adminDashboard" class="tab">
-      <h3>Dashboard Overview</h3>
-      <p>Total Users: <span id="totalUsers">0</span></p>
-      <p>Total Balance: ₦<span id="totalBalance">0</span></p>
-    </div>
-    
-    <div id="adminUsers" class="tab">
-      <h3>User Management</h3>
-      <table>
-        <thead><tr><th>Username</th><th>Email</th><th>Balance</th><th>Referral</th><th>Action</th></tr></thead>
-        <tbody id="usersTable"></tbody>
-      </table>
-    </div>
-    
-    <div id="adminTasks" class="tab">
-      <h3>Manage Tasks</h3>
-      <input type="text" id="taskName" placeholder="Task Name">
-      <input type="text" id="taskLink" placeholder="Task Link/URL">
-      <input type="number" id="taskAmount" placeholder="Amount ₦">
-      <button onclick="addTask()">Add Task</button>
-      <div id="adminTaskList"></div>
-      <h3>Manage Ads</h3>
-      <input type="text" id="adVideo" placeholder="Video URL">
-      <input type="text" id="adLink" placeholder="Ad Link">
-      <input type="number" id="adAmount" placeholder="Amount ₦">
-      <button onclick="addAd()">Add Ad</button>
-      <div id="adminAdList"></div>
-    </div>
-    
-    <div id="adminDeposits" class="tab">
-      <h3>Deposit Requests</h3>
-      <ul id="depositRequestsList"></ul>
-    </div>
-    
-    <div id="adminWithdraws" class="tab">
-      <h3>Withdraw Requests</h3>
-      <ul id="withdrawRequestsList"></ul>
-    </div>
-  </div>
-</div>
 
-<script>
-// Your existing JavaScript code for tasks, ads, users, Paystack integration, and admin login goes here
-</script>
+  <!-- Firebase + Paystack -->
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-app.js"></script>
+  <script src="https://www.gstatic.com/firebasejs/12.2.1/firebase-firestore.js"></script>
+  <script src="https://js.paystack.co/v1/inline.js"></script>
+  <script>
+    // Firebase config
+    const firebaseConfig = {
+      apiKey: "AIzaSyBydvDZETeZek37qoIpMlg3c6PLztPzRIg",
+      authDomain: "earn-hub-bd942.firebaseapp.com",
+      projectId: "earn-hub-bd942",
+      storageBucket: "earn-hub-bd942.firebasestorage.app",
+      messagingSenderId: "1018701515599",
+      appId: "1:1018701515599:web:68a432d89b09a3cc23933a",
+      measurementId: "G-W9QTS2C2FJ"
+    };
+    firebase.initializeApp(firebaseConfig);
+    const db = firebase.firestore();
 
+    // Globals
+    let currentUser = null, referrer = new URLSearchParams(location.search).get("ref");
+
+    // Show pages
+    function showPage(id){document.querySelectorAll("#userApp .page").forEach(p=>p.classList.remove("active"));document.getElementById(id).classList.add("active");}
+    function showAdmin(id){document.querySelectorAll("#adminApp .page").forEach(p=>p.classList.remove("active"));document.getElementById("admin"+id.charAt(0).toUpperCase()+id.slice(1)).classList.add("active");}
+
+    // Signup
+    async function signup(){
+      let name=document.getElementById("name").value, email=document.getElementById("email").value, phone=document.getElementById("phone").value, pass=document.getElementById("password").value;
+      if(!name||!email||!pass) return alert("Fill all fields");
+      await db.collection("users").doc(email).set({name,email,phone,pass,balance:0,paid:false,ref:referrer||null});
+      alert("Signup done, now login");
+    }
+    // Login
+    async function login(){
+      let email=document.getElementById("email").value, pass=document.getElementById("password").value;
+      // Admin check
+      if((email==="ikechukwufavour220@gmail.com"&&pass==="Chiboy@2011")||(email==="samuelikechukwu260@gmail.com"&&pass==="Talented@47")){
+        document.getElementById("auth").classList.add("hidden");document.getElementById("adminApp").classList.remove("hidden");loadAdmin();return;
+      }
+      let doc=await db.collection("users").doc(email).get();
+      if(!doc.exists||doc.data().pass!==pass) return alert("Invalid login");
+      currentUser=doc.data();document.getElementById("auth").classList.add("hidden");document.getElementById("userApp").classList.remove("hidden");
+      loadUser();
+    }
+
+    // Load User
+    function loadUser(){
+      document.getElementById("balance").innerText=currentUser.balance;
+      document.getElementById("userInfo").innerText=`${currentUser.name} (${currentUser.email})`;
+      document.getElementById("refLink").value=location.origin+location.pathname+"?ref="+currentUser.email;
+      if(currentUser.paid){unlock();}
+    }
+    function unlock(){
+      document.getElementById("lockedMsg").classList.add("hidden");
+      document.getElementById("tasks").classList.remove("hidden");
+      document.getElementById("ads").classList.remove("hidden");
+    }
+    // Paystack
+    function payNow(){
+      let handler=PaystackPop.setup({key:"pk_live_d52baea87b2c4e49b110aa5cda32260b33b0cb35",email:currentUser.email,amount:200*100,currency:"NGN",callback:async function(){
+        await db.collection("users").doc(currentUser.email).update({paid:true});
+        unlock();
+        // referral bonus
+        if(currentUser.ref){let refDoc=await db.collection("users").doc(currentUser.ref).get();if(refDoc.exists){let bal=refDoc.data().balance+50;await db.collection("users").doc(currentUser.ref).update({balance:bal});}}
+        alert("Payment successful! Tasks unlocked.");
+      }});
+      handler.openIframe();
+    }
+    // Withdraw
+    async function withdraw(){
+      let amt=parseInt(document.getElementById("withdrawAmt").value), bank=document.getElementById("bank").value;
+      if(amt<100) return alert("Minimum withdrawal is ₦100");
+      await db.collection("withdrawals").add({user:currentUser.email,amt,bank,status:"pending"});
+      alert("Withdraw request sent");
+    }
+
+    // Admin Load
+    async function loadAdmin(){
+      let snap=await db.collection("users").get();let html="";snap.forEach(d=>{let u=d.data();html+=`<div>${u.name} - ₦${u.balance} - Paid:${u.paid}</div>`});document.getElementById("userList").innerHTML=html;
+    }
+    async function addTask(){
+      let link=document.getElementById("taskLink").value, reward=parseInt(document.getElementById("taskReward").value);
+      await db.collection("tasks").add({link,reward});alert("Task added");
+    }
+    async function addAd(){
+      let video=document.getElementById("adVideo").value, link=document.getElementById("adLink").value;
+      await db.collection("ads").add({video,link});alert("Ad added");
+    }
+
+    // On load
+    window.onload=()=>{setTimeout(()=>{document.getElementById("loading").classList.add("hidden");document.getElementById("auth").classList.add("active");},1500);}
+  </script>
 </body>
-    </html>
+  </html>
